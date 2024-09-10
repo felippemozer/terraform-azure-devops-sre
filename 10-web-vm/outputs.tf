@@ -30,7 +30,7 @@ output "web_vm_public_ip" {
 }
 output "web_vm_id_128bit" {
   description = "Web Linux Virtual Machine ID - 128-bit identifier"
-  value = azurerm_linux_virtual_machine.web.virtual_machine_id
+  value       = azurerm_linux_virtual_machine.web.virtual_machine_id
 }
 output "web_vm_id" {
   value = azurerm_linux_virtual_machine.web.id

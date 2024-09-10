@@ -85,13 +85,13 @@ variable "bastion_subnet_address_space" {
 
 variable "bastion_service_subnet_name" {
   description = "Bastion Service Subnet name"
-  type = string
-  default = "AzureBastionSubnet"
+  type        = string
+  default     = "AzureBastionSubnet"
 }
 
 variable "bastion_service_address_prefixes" {
-  type = list(string)
-  default = [ "10.0.101.0/27" ]
+  type    = list(string)
+  default = ["10.0.101.0/27"]
 }
 
 # VMs
