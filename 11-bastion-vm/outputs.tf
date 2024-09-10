@@ -25,9 +25,9 @@ output "web_subnet_nsg_id" {
 output "web_vm_private_ip" {
   value = azurerm_linux_virtual_machine.web.private_ip_address
 }
-output "web_vm_public_ip" {
-  value = azurerm_public_ip.web.ip_address
-}
+# output "web_vm_public_ip" {
+#   value = azurerm_public_ip.web.ip_address
+# }
 output "web_vm_id_128bit" {
   description = "Web Linux Virtual Machine ID - 128-bit identifier"
   value       = azurerm_linux_virtual_machine.web.virtual_machine_id

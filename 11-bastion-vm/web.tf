@@ -47,14 +47,14 @@ resource "azurerm_network_security_rule" "web_inbound" {
   network_security_group_name = azurerm_network_security_group.web.name
 }
 
-resource "azurerm_public_ip" "web" {
-  name                = "${local.resource_name_prefix}-web-linuxvm-publicip"
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = azurerm_resource_group.rg.location
-  allocation_method   = "Static"
-  sku                 = "Standard"
-  domain_name_label   = "app1-vm-${random_string.random.result}"
-}
+# resource "azurerm_public_ip" "web" {
+#   name                = "${local.resource_name_prefix}-web-linuxvm-publicip"
+#   resource_group_name = azurerm_resource_group.rg.name
+#   location            = azurerm_resource_group.rg.location
+#   allocation_method   = "Static"
+#   sku                 = "Standard"
+#   domain_name_label   = "app1-vm-${random_string.random.result}"
+# }
 
 resource "azurerm_network_interface" "web_vm" {
   name                = "${local.resource_name_prefix}-web-linuxvm-nic"
@@ -65,7 +65,7 @@ resource "azurerm_network_interface" "web_vm" {
     name                          = "web-linuvm-ip-1"
     subnet_id                     = azurerm_subnet.web.id
     private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = azurerm_public_ip.web.id
+    # public_ip_address_id          = azurerm_public_ip.web.id
   }
 }
 
