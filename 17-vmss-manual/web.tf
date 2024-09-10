@@ -47,24 +47,15 @@ resource "azurerm_network_security_rule" "web_inbound" {
   network_security_group_name = azurerm_network_security_group.web.name
 }
 
-# resource "azurerm_public_ip" "web" {
-#   name                = "${local.resource_name_prefix}-web-linuxvm-publicip"
-#   resource_group_name = azurerm_resource_group.rg.name
-#   location            = azurerm_resource_group.rg.location
-#   allocation_method   = "Static"
-#   sku                 = "Standard"
-#   domain_name_label   = "app1-vm-${random_string.random.result}"
-# }
-
 resource "azurerm_network_interface" "web_vm" {
-  count = var.web_vm_instance_count
+  for_each = var.web_vm_instance_count
 
-  name                = "${local.resource_name_prefix}-web-linuxvm-nic-${count.index}"
+  name                = "${local.resource_name_prefix}-web-linuxvm-nic-${each.key}"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 
   ip_configuration {
-    name                          = "web-linuvm-ip-${count.index}"
+    name                          = "web-${each.key}-ip"
     subnet_id                     = azurerm_subnet.web.id
     private_ip_address_allocation = "Dynamic"
     # public_ip_address_id          = azurerm_public_ip.web.id
@@ -75,6 +66,68 @@ resource "azurerm_network_security_group" "web_vm_nic" {
   name                = "${azurerm_network_interface.web_vm.name}-nsg"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
+}
+
+resource "azurerm_network_security_group" "web_vmss" {
+  name                = "${azurerm_network_interface.web_vm.name}-nsg"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+
+  dynamic "security_rule" {
+    for_each = var.web_vmss_nsg_inbound_ports
+    content {
+      name                       = "Rule-Port-${security_rule.value}"
+      priority                   = sum([security_rule.key, 100])
+      direction                  = "Inbound"
+      access                     = "Allow"
+      protocol                   = "Tcp"
+      source_port_range          = "*"
+      destination_port_range     = security_rule.value
+      source_address_prefix      = "*"
+      destination_address_prefix = "*"
+    }
+  }
+}
+
+resource "azurerm_linux_virtual_machine_scale_set" "web" {
+  name = "${local.resource_name_prefix}-web-vmss"
+  # computer_name_prefix = "web-vmss-app1"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  sku                 = "Standard_DS1_v2"
+  instances           = 2
+  admin_username      = "azureuser"
+  custom_data         = filebase64("${path.module}/scripts/redhat-webvm-script.sh")
+  upgrade_mode        = "Automatic"
+
+  admin_ssh_key {
+    username   = "azureuser"
+    public_key = file("${path.module}/ssh/terraform-azure.pub")
+  }
+
+  network_interface {
+    name                      = "web-vmss-nic"
+    network_security_group_id = azurerm_network_security_group.web_vmss.id
+
+    ip_configuration {
+      name                                   = "internal"
+      primary                                = true
+      subnet_id                              = azurerm_subnet.web.id
+      load_balancer_backend_address_pool_ids = [azurerm_lb_backend_address_pool.web_slb.id]
+    }
+  }
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "RedHat"
+    offer     = "RHEL"
+    sku       = "83-gen2"
+    version   = "latest"
+  }
 }
 
 resource "azurerm_network_interface_security_group_association" "web_vm_nic" {
@@ -100,15 +153,15 @@ resource "azurerm_network_security_rule" "web_vm_nic_inbound" {
 }
 
 resource "azurerm_linux_virtual_machine" "web" {
-  count = var.web_vm_instance_count
+  for_each = var.web_vm_instance_count
 
-  name = "${local.resource_name_prefix}-web-linuxvm-${count.index}"
+  name = "${local.resource_name_prefix}-web-linuxvm-${each.key}"
   # computer_name = "web-linux-vm" # Hostname of the VM (Optional)
   resource_group_name   = azurerm_resource_group.rg.name
   location              = azurerm_resource_group.rg.id
   size                  = "Standard_DS1_v2"
   admin_username        = "azureuser"
-  network_interface_ids = [element(azurerm_network_interface.web_vm[*].id, count.index)]
+  network_interface_ids = [azurerm_network_interface.web_vm[each.key].id]
 
   admin_ssh_key {
     username   = "azureuser"
@@ -175,20 +228,19 @@ resource "azurerm_lb_rule" "web_slb" {
 }
 
 resource "azurerm_network_interface_backend_address_pool_association" "web" {
-  count = var.web_vm_instance_count
+  for_each = var.web_vm_instance_count
 
-  network_interface_id    = element(azurerm_network_interface.web_vm[*].id, count.index)
-  ip_configuration_name   = azurerm_network_interface.web_vm[count.index].ip_configuration[0].name
+  network_interface_id    = azurerm_network_interface.web_vm[each.key].id
+  ip_configuration_name   = azurerm_network_interface.web_vm[each.key].ip_configuration[0].name
   backend_address_pool_id = azurerm_lb_backend_address_pool.web_slb.id
 }
 
 resource "azurerm_lb_nat_rule" "web_slb" {
-  depends_on = [azurerm_lb.web]
-  count      = var.web_vm_instance_count
+  for_each = var.web_vm_instance_count
 
-  name                           = "vm-${count.index}-ssh-${var.web_slb_inbound_nat_ports[count.index]}-vm-22"
+  name                           = "${each.key}-ssh-${each.value}-vm-22"
   protocol                       = "Tcp"
-  frontend_port                  = var.web_slb_inbound_nat_ports[count.index]
+  frontend_port                  = each.value
   backend_port                   = 22
   frontend_ip_configuration_name = azurerm_lb.web.frontend_ip_configuration[0].name
   loadbalancer_id                = azurerm_lb.web.id
@@ -196,9 +248,9 @@ resource "azurerm_lb_nat_rule" "web_slb" {
 }
 
 resource "azurerm_network_interface_nat_rule_association" "web" {
-  count = var.web_vm_instance_count
+  for_each = var.web_vm_instance_count
 
-  network_interface_id  = azurerm_network_interface.web_vm[count.index].id
-  ip_configuration_name = azurerm_network_interface.web_vm[count.index].ip_configuration[0].name
-  nat_rule_id           = azurerm_lb_nat_rule.web_slb[count.index].id
+  network_interface_id  = azurerm_network_interface.web_vm[each.key].id
+  ip_configuration_name = azurerm_network_interface.web_vm[each.key].ip_configuration[0].name
+  nat_rule_id           = azurerm_lb_nat_rule.web_slb[each.key].id
 }

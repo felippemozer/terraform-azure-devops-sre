@@ -56,6 +56,10 @@ variable "web_vm_instance_count" {
     "vm2" = "2022"
   }
 }
+variable "web_vmss_nsg_inbound_ports" {
+  type    = list(string)
+  default = ["22", "80", "443"]
+}
 
 variable "app_subnet_name" {
   description = "Web subnet name"

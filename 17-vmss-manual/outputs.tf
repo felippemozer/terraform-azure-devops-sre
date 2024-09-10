@@ -54,6 +54,10 @@ output "web_vm_nic_private_ip_addresses" {
   value = azurerm_network_interface.web_vm.private_ip_addresses
 }
 
+output "web_vmss_id" {
+  value = azurerm_linux_virtual_machine_scale_set.web.id
+}
+
 output "web_slb_id" {
   value = azurerm_lb.web.id
 }
