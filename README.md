@@ -11,3 +11,7 @@ This project replies some **Terraform on Azure with IaC DevOps SRE | Real-World 
 Cada seção estuda um ou mais conceitos do _Terraform_, em um projeto incremental, aproveitando muitos recursos criados em seções precedentes para agilizar o desenvolvimento dos novos conceitos ensinados. Além disso, cada seção possui seu próprio arquivo `README.md`, explicando individualmente as novidades apresentadas pela seção descrita.
 
 Each section shows some Terraform concepts, inside an incremental project, where many preceding section resources are used to focus developers on creating new resources. So on, each section has its own `README.md` file, with individual explaination of section new concepts and resources.
+
+# Contact
+
+- Felippe Mozer (developer) - felippe.mozer@hotmail.com
